@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWATCHMAT — Pop Art Stopwatch</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ap-gold: #C8A951;
+    --swatch-red: #FF2D55;
+    --swatch-blue: #00C3FF;
+    --swatch-yellow: #FFE600;
+    --swatch-green: #00E87F;
+    --swatch-purple: #BF00FF;
+    --pop-black: #1A1A2E;
+    --halftone: #16213E;
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--swatch-yellow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Mono', monospace;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle, rgba(0,0,0,0.18) 2px, transparent 2px);
+    background-size: 22px 22px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .burst {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 700px;
+    height: 700px;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .burst svg { width: 100%; height: 100%; }
+
+  .page-title {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    color: var(--pop-black);
+    letter-spacing: 0.08em;
+    text-align: center;
+    z-index: 10;
+    position: relative;
+    margin-bottom: 18px;
+    -webkit-text-stroke: 2px var(--pop-black);
+    paint-order: stroke fill;
+    text-shadow: 4px 4px 0 var(--swatch-red), 8px 8px 0 rgba(0,0,0,0.15);
+  }
+
+  .watch-wrap {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bezel {
+    position: relative;
+    width: 340px;
+    height: 340px;
+    clip-path: polygon(
+      29% 0%, 71% 0%,
+      100% 29%, 100% 71%,
+      71% 100%, 29% 100%,
+      0% 71%, 0% 29%
+    );
+    background: linear-gradient(145deg, #d4a843 0%, #f0c84a 30%, #b8892a 60%, #e0b840 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 0 0 4px #a07820,
+      0 20px 60px rgba(0,0,0,0.55),
+      inset 0 2px 6px rgba(255,255,255,0.3);
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4));
+  }
+
+  .bezel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    clip-path: inherit;
+    pointer-events: none;
+  }
+
+  .screw {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f5d060, #8b6914);
+    border: 2px solid #6b5010;
+    box-shadow: inset 0 1px 3px rgba(255,255,255,0.5), 0 1px 2px rgba(0,0,0,0.6);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .screw::before, .screw::after {
+    content: '';
+    position: absolute;
+    background: rgba(0,0,0,0.5);
+    border-radius: 1px;
+  }
+  .screw::before { width: 8px; height: 2px; }
+  .screw::after  { width: 2px; height: 8px; }
+
+  .screw:nth-child(1)  { top: 12px;  left: 50%; transform: translateX(-50%); }
+  .screw:nth-child(2)  { bottom: 12px; left: 50%; transform: translateX(-50%); }
+  .screw:nth-child(3)  { left: 12px;  top: 50%; transform: translateY(-50%); }
+  .screw:nth-child(4)  { right: 12px; top: 50%; transform: translateY(-50%); }
+  .screw:nth-child(5)  { top: 38px;  left: 38px; }
+  .screw:nth-child(6)  { top: 38px;  right: 38px; }
+  .screw:nth-child(7)  { bottom: 38px; left: 38px; }
+  .screw:nth-child(8)  { bottom: 38px; right: 38px; }
+
+  .dial {
+    width: 270px;
+    height: 270px;
+    clip-path: polygon(
+      29% 0%, 71% 0%,
+      100% 29%, 100% 71%,
+      71% 100%, 29% 100%,
+      0% 71%, 0% 29%
+    );
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0d0d20 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dial::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 9px),
+      repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 9px);
+    pointer-events: none;
+  }
+
+  .dial::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--swatch-red), var(--swatch-blue), var(--swatch-green), var(--swatch-purple));
+  }
+
+  .brand-line {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.35em;
+    color: var(--ap-gold);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .brand-line.sub {
+    font-size: 0.45rem;
+    letter-spacing: 0.5em;
+    color: rgba(200,169,81,0.6);
+    margin-bottom: 14px;
+  }
+
+  .time-display {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .minutes-val {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 4.8rem;
+    color: #fff;
+    text-shadow: 0 0 20px var(--swatch-blue), 0 0 40px rgba(0,195,255,0.3);
+    letter-spacing: -2px;
+    display: block;
+  }
+
+  .colon {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 3.5rem;
+    color: var(--ap-gold);
+    display: inline-block;
+    animation: blink 1s step-end infinite;
+    position: relative;
+    top: -4px;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .seconds-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 2px;
+  }
+
+  .seconds-val {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 4.8rem;
+    color: var(--swatch-red);
+    text-shadow: 0 0 20px var(--swatch-red), 0 0 40px rgba(255,45,85,0.3);
+    letter-spacing: -2px;
+  }
+
+  .millis-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    color: var(--ap-gold);
+    font-weight: 700;
+    letter-spacing: 1px;
+    align-self: flex-end;
+    margin-bottom: 6px;
+  }
+
+  .unit-labels {
+    display: flex;
+    justify-content: space-around;
+    width: 160px;
+    margin-top: 6px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .unit-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.3em;
+    color: rgba(200,169,81,0.7);
+  }
+
+  .lap-mini {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--swatch-green);
+    margin-top: 8px;
+    letter-spacing: 1px;
+    position: relative;
+    z-index: 2;
+    height: 14px;
+    text-align: center;
+  }
+
+  .pushers {
+    position: absolute;
+    right: -52px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    z-index: 20;
+  }
+
+  .pusher {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.08s;
+    user-select: none;
+  }
+
+  .pusher:active { transform: translateX(4px); }
+
+  .pusher-body {
+    width: 38px;
+    height: 22px;
+    border-radius: 6px 14px 14px 6px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.25);
+    transition: box-shadow 0.08s, transform 0.08s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pusher-body::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 4px; right: 10px; height: 3px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+  }
+
+  .pusher-body:active {
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+    transform: translate(2px, 0);
+  }
+
+  #btn-start .pusher-body  { background: linear-gradient(135deg, #00E87F, #00a85a); }
+  #btn-stop .pusher-body   { background: linear-gradient(135deg, #FF2D55, #cc0033); }
+  #btn-lap .pusher-body    { background: linear-gradient(135deg, #00C3FF, #0077cc); }
+  #btn-reset .pusher-body  { background: linear-gradient(135deg, #BF00FF, #7a00aa); }
+
+  .pusher-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    color: var(--pop-black);
+    text-align: center;
+    margin-top: 2px;
+  }
+
+  .crown-wrap {
+    position: absolute;
+    left: -36px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+  }
+
+  .crown {
+    width: 28px;
+    height: 36px;
+    background: linear-gradient(90deg, #c8a030, #f0c84a, #c8a030);
+    border-radius: 6px 2px 2px 6px;
+    border: 2px solid #a07820;
+    position: relative;
+    box-shadow: -2px 2px 6px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .crown-line {
+    width: 14px;
+    height: 2px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 1px;
+  }
+
+  .speech-bubble {
+    position: absolute;
+    top: -64px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 3px solid var(--pop-black);
+    border-radius: 14px;
+    padding: 6px 16px;
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: var(--pop-black);
+    white-space: nowrap;
+    box-shadow: 3px 3px 0 var(--pop-black);
+    z-index: 30;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .speech-bubble.show { opacity: 1; }
+
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 7px solid transparent;
+    border-top-color: var(--pop-black);
+  }
+
+  .laps-container {
+    position: relative;
+    z-index: 10;
+    margin-top: 22px;
+    width: 340px;
+    max-height: 130px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--swatch-red) transparent;
+  }
+
+  .laps-container::-webkit-scrollbar { width: 4px; }
+  .laps-container::-webkit-scrollbar-thumb { background: var(--swatch-red); border-radius: 2px; }
+
+  .lap-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.12);
+    animation: lap-pop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes lap-pop {
+    from { transform: scaleY(0); opacity: 0; }
+    to   { transform: scaleY(1); opacity: 1; }
+  }
+
+  .lap-row:nth-child(odd)  { background: rgba(255,255,255,0.6); }
+  .lap-row:nth-child(even) { background: rgba(255,255,255,0.85); }
+
+  .lap-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.8rem;
+    color: var(--swatch-red);
+    letter-spacing: 0.1em;
+    min-width: 52px;
+  }
+
+  .lap-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--pop-black);
+  }
+
+  .lap-delta {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: #666;
+    min-width: 70px;
+    text-align: right;
+  }
+
+  .state-ring {
+    position: absolute;
+    top: -5px; left: -5px; right: -5px; bottom: -5px;
+    clip-path: polygon(
+      29% 0%, 71% 0%, 100% 29%, 100% 71%,
+      71% 100%, 29% 100%, 0% 71%, 0% 29%
+    );
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .state-ring.running {
+    opacity: 1;
+    background: transparent;
+    box-shadow: 0 0 0 3px var(--swatch-green), 0 0 20px var(--swatch-green);
+    animation: pulse-ring 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 0 3px var(--swatch-green), 0 0 15px var(--swatch-green); }
+    50%       { box-shadow: 0 0 0 5px var(--swatch-green), 0 0 30px var(--swatch-green); }
+  }
+
+  .sweep-arc {
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  .sweep-arc circle {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transform-origin: center;
+    transform: rotate(-90deg);
+    stroke: var(--swatch-red);
+    stroke-dasharray: 0 753;
+    transition: stroke-dasharray 0.1s linear;
+    filter: drop-shadow(0 0 4px var(--swatch-red));
+  }
+
+  .status-dot {
+    position: absolute;
+    top: 18px;
+    right: 70px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #555;
+    z-index: 4;
+    transition: background 0.3s;
+  }
+
+  .status-dot.running {
+    background: var(--swatch-green);
+    box-shadow: 0 0 6px var(--swatch-green);
+    animation: dot-blink 0.8s ease-in-out infinite;
+  }
+
+  @keyframes dot-blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+
+<div class="burst">
+  <svg viewBox="0 0 700 700" xmlns="http://www.w3.org/2000/svg">
+    <g transform="translate(350,350)">
+      <polygon points="0,-340 18,-180 0,-160 -18,-180" fill="#FF2D55" opacity="0.7"/>
+      <polygon points="340,0 180,18 160,0 180,-18" fill="#00C3FF" opacity="0.7"/>
+      <polygon points="0,340 -18,180 0,160 18,180" fill="#BF00FF" opacity="0.7"/>
+      <polygon points="-340,0 -180,-18 -160,0 -180,18" fill="#00E87F" opacity="0.7"/>
+      <polygon points="240,-240 110,-150 95,-165 150,-110" fill="#FF2D55" opacity="0.5"/>
+      <polygon points="240,240 150,110 165,95 110,150" fill="#00C3FF" opacity="0.5"/>
+      <polygon points="-240,240 -110,150 -95,165 -150,110" fill="#BF00FF" opacity="0.5"/>
+      <polygon points="-240,-240 -150,-110 -165,-95 -110,-150" fill="#00E87F" opacity="0.5"/>
+      <polygon points="0,-340 340,0 0,340 -340,0" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+      <circle cx="0" cy="0" r="200" fill="rgba(255,230,0,0.25)"/>
+    </g>
+  </svg>
+</div>
+
+<div class="page-title">SWATCHMAT · ROYAL OP</div>
+
+<div class="watch-wrap">
+  <div id="state-ring" class="state-ring"></div>
+
+  <div class="crown-wrap">
+    <div class="crown">
+      <div class="crown-line"></div>
+      <div class="crown-line"></div>
+      <div class="crown-line"></div>
+      <div class="crown-line"></div>
+    </div>
+  </div>
+
+  <div class="bezel">
+    <div class="screw"></div>
+    <div class="screw"></div>
+    <div class="screw"></div>
+    <div class="screw"></div>
+    <div class="screw"></div>
+    <div class="screw"></div>
+    <div class="screw"></div>
+    <div class="screw"></div>
+
+    <div class="dial">
+      <svg class="sweep-arc" viewBox="0 0 240 240">
+        <circle id="sweep-circle" cx="120" cy="120" r="109"/>
+      </svg>
+
+      <div class="status-dot" id="status-dot"></div>
+
+      <div class="brand-line">SWATCHMAT</div>
+      <div class="brand-line sub">ROYAL OP · AUTOMATIC</div>
+
+      <div class="time-display">
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
+          <span class="minutes-val" id="minutes">00</span>
+          <span class="colon" id="colon">:</span>
+          <div class="seconds-row">
+            <span class="seconds-val" id="seconds">00</span>
+            <span class="millis-val" id="millis">.00</span>
+          </div>
+        </div>
+        <div class="unit-labels">
+          <span class="unit-label">MIN</span>
+          <span class="unit-label" style="margin-left:28px">SEC</span>
+        </div>
+      </div>
+
+      <div class="lap-mini" id="lap-mini"></div>
+    </div>
+  </div>
+
+  <div class="pushers">
+    <div class="pusher" id="btn-start" onclick="handleStart()">
+      <div class="pusher-body">▶</div>
+      <div class="pusher-label">START</div>
+    </div>
+    <div class="pusher" id="btn-stop" onclick="handleStop()">
+      <div class="pusher-body">■</div>
+      <div class="pusher-label">STOP</div>
+    </div>
+    <div class="pusher" id="btn-lap" onclick="handleLap()">
+      <div class="pusher-body">◉</div>
+      <div class="pusher-label">LAP</div>
+    </div>
+    <div class="pusher" id="btn-reset" onclick="handleReset()">
+      <div class="pusher-body">↺</div>
+      <div class="pusher-label">RESET</div>
+    </div>
+  </div>
+
+  <div class="speech-bubble" id="bubble"></div>
+</div>
+
+<div class="laps-container" id="laps-list"></div>
+
+<script>
+  let startTime = 0;
+  let elapsed = 0;
+  let timerID = null;
+  let running = false;
+  let laps = [];
+  let lastLapTime = 0;
+  let bubbleTimer = null;
+
+  const elMin    = document.getElementById('minutes');
+  const elSec    = document.getElementById('seconds');
+  const elMilli  = document.getElementById('millis');
+  const elColon  = document.getElementById('colon');
+  const elDot    = document.getElementById('status-dot');
+  const elRing   = document.getElementById('state-ring');
+  const elBubble = document.getElementById('bubble');
+  const elLapMini= document.getElementById('lap-mini');
+  const elLaps   = document.getElementById('laps-list');
+  const elSweep  = document.getElementById('sweep-circle');
+  const circumference = 2 * Math.PI * 109;
+
+  function pad(n, d=2) { return String(Math.floor(n)).padStart(d,'0'); }
+
+  function updateDisplay() {
+    const total = elapsed;
+    const mins  = Math.floor(total / 60000);
+    const secs  = Math.floor((total % 60000) / 1000);
+    const ms    = Math.floor((total % 1000) / 10);
+    elMin.textContent   = pad(mins);
+    elSec.textContent   = pad(secs);
+    elMilli.textContent = '.' + pad(ms);
+    const secFrac = (total % 60000) / 60000;
+    const dash = secFrac * circumference;
+    elSweep.style.strokeDasharray = `${dash} ${circumference}`;
+  }
+
+  function tick() {
+    elapsed = Date.now() - startTime;
+    updateDisplay();
+    timerID = requestAnimationFrame(tick);
+  }
+
+  function handleStart() {
+    if (running) return;
+    running = true;
+    startTime = Date.now() - elapsed;
+    timerID = requestAnimationFrame(tick);
+    elDot.classList.add('running');
+    elRing.classList.add('running');
+    elColon.style.animation = 'none';
+    showBubble('POW! RUNNING!');
+  }
+
+  function handleStop() {
+    if (!running) return;
+    running = false;
+    cancelAnimationFrame(timerID);
+    elDot.classList.remove('running');
+    elRing.classList.remove('running');
+    elColon.style.animation = '';
+    showBubble('ZAPP! STOPPED!');
+  }
+
+  function handleLap() {
+    if (!running && elapsed === 0) return;
+    const lapTime = elapsed;
+    const delta   = lapTime - lastLapTime;
+    laps.push({ n: laps.length + 1, t: lapTime, d: delta });
+    lastLapTime = lapTime;
+
+    const lapNum  = pad(laps.length);
+    const mins    = Math.floor(lapTime / 60000);
+    const secs    = Math.floor((lapTime % 60000) / 1000);
+    const ms      = Math.floor((lapTime % 1000) / 10);
+    const dm = Math.floor(delta / 60000);
+    const ds = Math.floor((delta % 60000) / 1000);
+    const dms= Math.floor((delta % 1000) / 10);
+
+    const row = document.createElement('div');
+    row.className = 'lap-row';
+    row.innerHTML = `
+      <span class="lap-num">LAP ${lapNum}</span>
+      <span class="lap-time">${pad(mins)}:${pad(secs)}<span style="font-size:.7rem;color:#888">.${pad(ms)}</span></span>
+      <span class="lap-delta">+${pad(dm)}:${pad(ds)}.${pad(dms)}</span>
+    `;
+    elLaps.prepend(row);
+
+    elLapMini.textContent = `LAP ${laps.length} · +${pad(dm)}:${pad(ds)}.${pad(dms)}`;
+    showBubble(`LAP ${laps.length}!`);
+  }
+
+  function handleReset() {
+    handleStop();
+    elapsed = 0;
+    lastLapTime = 0;
+    laps = [];
+    updateDisplay();
+    elLaps.innerHTML = '';
+    elLapMini.textContent = '';
+    elSweep.style.strokeDasharray = `0 ${circumference}`;
+    showBubble('KABOOM! RESET!');
+  }
+
+  function showBubble(msg) {
+    clearTimeout(bubbleTimer);
+    elBubble.textContent = msg;
+    elBubble.classList.add('show');
+    bubbleTimer = setTimeout(() => elBubble.classList.remove('show'), 1500);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space')  { e.preventDefault(); running ? handleStop() : handleStart(); }
+    if (e.code === 'KeyL')   handleLap();
+    if (e.code === 'KeyR')   handleReset();
+  });
+
+  updateDisplay();
+</script>
+</body>
+</html>
